@@ -1,5 +1,5 @@
 """Minimal PyPI uploader. No twine, no Rust."""
-import sys, os, hashlib, requests
+import sys, os, re, hashlib, requests
 from pathlib import Path
 
 REPO = sys.argv[1] if len(sys.argv) > 1 else "pypi"
@@ -31,7 +31,7 @@ for f in files:
         ":action": "file_upload",
         "protocol_version": "1",
         "name": "vzrecon",
-        "version": "3.0.0",
+        "version": re.match(r"vzrecon-(\d+\.\d+\.\d+)", f.name).group(1),
         "filetype": "bdist_wheel" if f.suffix == ".whl" else "sdist",
         "sha256_digest": digest,
         "metadata_version": "2.1",
