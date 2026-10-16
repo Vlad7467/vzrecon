@@ -1,0 +1,37 @@
+name: ci
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: Version
+        run: vzrecon --version
+      - name: Self-test
+        run: vzrecon --self-test
+      - name: Tests
+        run: pytest -q
+      - name: Exit code check
+        run: |
+          mkdir -p /tmp/empty && cd /tmp/empty
+          set +e
+          vzrecon --plain
+          rc=$?
+          set -e
+          [ "$rc" -eq 3 ] || { echo "expected 3, got $rc"; exit 1; }

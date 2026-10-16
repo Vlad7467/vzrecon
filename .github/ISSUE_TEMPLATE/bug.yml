@@ -1,0 +1,34 @@
+name: Bug report
+description: Something is broken
+labels: ["bug"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `vzrecon --version`
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command
+      description: Exact command line you ran
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: Output
+      description: Full output, or a screenshot for TUI issues
+    validations:
+      required: true
+  - type: checkboxes
+    id: pre
+    attributes:
+      label: Pre-flight
+      options:
+        - label: Ran `vzrecon --self-test` and all protocols printed `ok`
+          required: true
+        - label: Searched existing issues
+          required: true

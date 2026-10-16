@@ -1,0 +1,50 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vzrecon"
+version = "3.0.0"
+description = "Protocol-level validator for HTTP/SOCKS4/SOCKS5 proxies"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{name = "VZLOI GROUP"}]
+keywords = ["proxy","socks","socks5","socks4","validator","recon","async"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: System Administrators",
+  "Operating System :: POSIX",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Internet",
+  "Topic :: System :: Networking",
+  "Topic :: Utilities",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23"]
+
+[project.urls]
+Homepage = "https://github.com/vzloi/vzrecon"
+Source = "https://github.com/vzloi/vzrecon"
+Issues = "https://github.com/vzloi/vzrecon/issues"
+Changelog = "https://github.com/vzloi/vzrecon/blob/main/CHANGELOG.md"
+
+[project.scripts]
+vzrecon = "vzrecon.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["vzrecon*"]
+
+[tool.setuptools.package-data]
+vzrecon = ["py.typed"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

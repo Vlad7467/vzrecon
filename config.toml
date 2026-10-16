@@ -1,0 +1,15 @@
+# vzrecon runtime config
+workers       = 1200
+tcp_timeout   = 3.0
+hs_timeout    = 6.0
+
+target_host   = "api.trongrid.io"
+target_port   = 443
+
+render_hz     = 3.0
+sample_size   = 10
+
+source_dir    = "."
+output_dir    = "."
+format        = "txt"
+protocols     = ["http", "socks4", "socks5"]
