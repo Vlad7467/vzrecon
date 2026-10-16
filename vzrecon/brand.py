@@ -28,24 +28,14 @@ class SGR:
     STEEL = "\x1b[38;5;242m"
     ASH   = "\x1b[38;5;248m"
     IVORY = "\x1b[38;5;252m"
-    WHITE = "\x1b[38;5;255m"
 
     BLOOD = "\x1b[38;5;88m"
     CRIM  = "\x1b[38;5;160m"
-    FLARE = "\x1b[38;5;203m"
     GOLD  = "\x1b[38;5;220m"
     AMBER = "\x1b[38;5;214m"
 
-    CYAN  = "\x1b[38;5;66m"
     ICE   = "\x1b[38;5;117m"
     VERD  = "\x1b[38;5;77m"
-    GREEN = "\x1b[38;5;114m"
 
-    BG      = "\x1b[48;5;233m"
-    BG_DEEP = "\x1b[48;5;232m"
-    BG_RED  = "\x1b[48;5;52m"
-    BG_BAR  = "\x1b[48;5;236m"
-
-    DIM   = IRON
-    STEEL_ = STEEL
-    GRN   = VERD
+    BG     = "\x1b[48;5;233m"
+    BG_BAR = "\x1b[48;5;236m"

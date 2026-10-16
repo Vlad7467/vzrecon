@@ -1,8 +1,15 @@
-import argparse, asyncio, contextlib, secrets, sys, time
+import argparse
+import asyncio
+import contextlib
+import secrets
+import sys
+import time
 from pathlib import Path
+
 from . import __codename__, __version__
-from .brand import (BANNER, CODENAME, CREW, OWNER, CONTACT,
-                    MOTTO, SUFFIX, TAGLINE, TOOL, SGR)
+from .brand import (
+    BANNER, CODENAME, CONTACT, CREW, MOTTO, OWNER, SUFFIX, SGR, TAGLINE, TOOL,
+)
 from .config import PRESETS, Config
 from .engine import Scan, discover
 from .platform import notify, wake_lock, wake_unlock
@@ -10,7 +17,7 @@ from .tui import TUI
 from .writers import emit_csv, emit_json, emit_txt
 
 
-def _parse(a):
+def _args(argv):
     p = argparse.ArgumentParser(
         prog=TOOL,
         description=f"proxy validator // {CREW} // {OWNER}",
@@ -31,63 +38,77 @@ def _parse(a):
     p.add_argument("--no-notify", action="store_true")
     p.add_argument("--verify", action="store_true")
     p.add_argument("--about", action="store_true")
-    return p.parse_args(a)
+    return p.parse_args(argv)
 
 
 def _merge(a):
     c = Config.from_toml(a.config) if a.config else Config()
-    if a.preset: c = c.apply_preset(a.preset)
-    c.source_dir = str(a.dir); c.output_dir = str(a.output_dir)
-    if a.workers is not None: c.workers = a.workers
-    if a.format: c.format = a.format
+    if a.preset:
+        c = c.apply_preset(a.preset)
+    c.source_dir = str(a.dir)
+    c.output_dir = str(a.output_dir)
+    if a.workers is not None:
+        c.workers = a.workers
+    if a.format:
+        c.format = a.format
     if a.target:
-        h, _, pt = a.target.partition(":")
-        c.target_host = h; c.target_port = int(pt) if pt else 443
+        host, _, port = a.target.partition(":")
+        c.target_host = host
+        c.target_port = int(port) if port else 443
     if a.only:
-        c.protocols = tuple(s.strip() for s in a.only.split(",") if s.strip())
-    if a.no_notify: c.notify = False
-    if a.verify: c.verify = True
+        c.protocols = tuple(p.strip() for p in a.only.split(",") if p.strip())
+    if a.no_notify:
+        c.notify = False
+    if a.verify:
+        c.verify = True
     c.validate()
     return c
 
 
 async def _dispatch(scans, cfg, plain):
     if plain:
-        await asyncio.gather(*(s.run() for s in scans)); return
+        await asyncio.gather(*(s.run() for s in scans))
+        return
     sid = secrets.token_hex(4).upper()
     tui = TUI(scans, f"{cfg.target_host}:{cfg.target_port}",
               cfg.workers, sid, "balanced")
-    tui.attach(); tui.enter()
-    ts = [asyncio.create_task(s.run()) for s in scans]
+    tui.attach()
+    tui.enter()
+    tasks = [asyncio.create_task(s.run()) for s in scans]
     tick = 1.0 / cfg.render_hz
     try:
-        while not all(t.done() for t in ts):
-            for s in scans: s.meter.sample()
-            tui.draw(); await asyncio.sleep(tick)
+        while not all(t.done() for t in tasks):
+            for s in scans:
+                s.meter.sample()
+            tui.draw()
+            await asyncio.sleep(tick)
         tui.draw()
     finally:
-        for t in ts: t.cancel()
+        for t in tasks:
+            t.cancel()
         with contextlib.suppress(Exception):
-            await asyncio.gather(*ts, return_exceptions=True)
+            await asyncio.gather(*tasks, return_exceptions=True)
         tui.leave()
 
 
-def _write(scans, cfg, out):
-    out.mkdir(parents=True, exist_ok=True)
+def _write(scans, cfg, out_dir):
+    out_dir.mkdir(parents=True, exist_ok=True)
     for s in scans:
-        stem = out / f"{s.kind}_alive"
-        if cfg.format == "txt": emit_txt(stem.with_suffix(".txt"), s.hits)
-        elif cfg.format == "json": emit_json(stem.with_suffix(".json"), s.kind, s.hits)
-        else: emit_csv(stem.with_suffix(".csv"), s.hits)
+        stem = out_dir / f"{s.kind}_alive"
+        if cfg.format == "txt":
+            emit_txt(stem.with_suffix(".txt"), s.hits)
+        elif cfg.format == "json":
+            emit_json(stem.with_suffix(".json"), s.kind, s.hits)
+        else:
+            emit_csv(stem.with_suffix(".csv"), s.hits)
 
 
 def _splash():
-    r = SGR.R
     print()
     for ln in BANNER:
-        print(f"  {SGR.CRIM}{ln}{r}")
-    print(f"  {SGR.IRON}{CREW}  ::  {SUFFIX}{r}")
-    print(f"  {SGR.IRON}{SGR.I}{MOTTO}{r}")
+        print(f"  {SGR.CRIM}{ln}{SGR.R}")
+    print(f"  {SGR.IRON}{CREW}  ::  {SUFFIX}{SGR.R}")
+    print(f"  {SGR.IRON}{SGR.I}{MOTTO}{SGR.R}")
     print()
 
 
@@ -100,8 +121,6 @@ def _about():
   {SGR.IRON}contact  {SGR.R}{SGR.CRIM}{CONTACT}{SGR.R}
   {SGR.IRON}support  {SGR.R}{SGR.CRIM}bot support{SGR.R}
   {SGR.IRON}tool     {SGR.R}{TOOL} {__version__} ({CODENAME}){SGR.R}
-
-  {SGR.IRON}не пиши нам. не ищи нас. мы найдём первыми.{SGR.R}
 """)
     return 0
 
@@ -110,58 +129,60 @@ def _presets():
     print(f"\n  {SGR.CRIM}{SGR.B}{CREW} // {SUFFIX}{SGR.R}  ·  presets")
     print(f"  {SGR.IRON}{'─' * 46}{SGR.R}")
     for n, v in PRESETS.items():
-        print(f"  {SGR.GOLD}{n:<10}{SGR.R} {SGR.STEEL}"
-              f"workers={v['workers']:<5} tcp={v['tcp_timeout']}s "
-              f"hs={v['hs_timeout']}s hz={v['render_hz']}{SGR.R}")
-    print(); return 0
+        print(
+            f"  {SGR.GOLD}{n:<10}{SGR.R} {SGR.STEEL}"
+            f"workers={v['workers']:<5} tcp={v['tcp_timeout']}s "
+            f"hs={v['hs_timeout']}s hz={v['render_hz']}{SGR.R}"
+        )
+    print()
+    return 0
 
 
 def main(argv=None):
-    a = _parse(argv)
-    if a.about: return _about()
-    if a.list_presets: return _presets()
+    a = _args(argv)
+    if a.about:
+        return _about()
+    if a.list_presets:
+        return _presets()
     if a.self_test:
         from .selftest import run
-        print(f"\n  {SGR.CRIM}{SGR.B}{CREW} // {SUFFIX}{SGR.R}  "
-              f"::  protocol self-test")
+        print(f"\n  {SGR.CRIM}{SGR.B}{CREW} // {SUFFIX}{SGR.R}  ::  protocol self-test")
         print(f"  {SGR.IRON}owner {OWNER}  ::  {CONTACT}{SGR.R}")
         print(f"  {SGR.IRON}{'─' * 46}{SGR.R}")
         rc = asyncio.run(run())
         print()
         return rc
-
-    try: cfg = _merge(a)
+    try:
+        cfg = _merge(a)
     except (ValueError, FileNotFoundError) as e:
         print(f"{SGR.CRIM}config:{SGR.R} {e}", file=sys.stderr)
         return 2
-
-    src = discover(cfg)
-    if not src:
+    sources = discover(cfg)
+    if not sources:
         print(f"{SGR.CRIM}no sources{SGR.R} in {cfg.source_dir}", file=sys.stderr)
         return 3
-
     _splash()
     print(f"  {SGR.IRON}crew     {SGR.R}{SGR.CRIM}{CREW}  //  {OWNER}{SGR.R}")
     print(f"  {SGR.IRON}contact  {SGR.R}{SGR.CRIM}{CONTACT}{SGR.R}")
-    print(f"  {SGR.IRON}protocols{SGR.R} {', '.join(k for k, _ in src)}")
-    print(f"  {SGR.IRON}sources  {SGR.R} {len(src)} file(s)")
+    print(f"  {SGR.IRON}protocols{SGR.R} {', '.join(k for k, _ in sources)}")
+    print(f"  {SGR.IRON}sources  {SGR.R} {len(sources)} file(s)")
     print(f"  {SGR.IRON}target   {SGR.R} {cfg.target_host}:{cfg.target_port}")
     print(f"  {SGR.IRON}workers  {SGR.R} {cfg.workers}\n")
-
-    if cfg.wake_lock: wake_lock()
+    if cfg.wake_lock:
+        wake_lock()
     scans = []
     Path(cfg.output_dir).mkdir(parents=True, exist_ok=True)
-    for k, s in src:
-        scans.append(Scan(k, s, Path(cfg.output_dir) / f"{k}_alive.txt", cfg))
+    for kind, src in sources:
+        scans.append(Scan(kind, src, Path(cfg.output_dir) / f"{kind}_alive.txt", cfg))
     t0 = time.monotonic()
     try:
         with contextlib.suppress(KeyboardInterrupt):
             asyncio.run(_dispatch(scans, cfg, a.plain))
     finally:
-        if cfg.wake_lock: wake_unlock()
+        if cfg.wake_lock:
+            wake_unlock()
     dt = time.monotonic() - t0
     _write(scans, cfg, Path(cfg.output_dir))
-
     print(f"\n  {SGR.CRIM}{SGR.B}{CREW}  ::  scan complete{SGR.R}")
     print(f"  {SGR.IRON}{'─' * 46}{SGR.R}")
     print(f"  {SGR.IRON}duration{SGR.R}  {dt:.1f}s")
@@ -172,9 +193,8 @@ def main(argv=None):
         total += m.ok
         print(f"  {s.kind:<7} {m.ok:>6} / {m.done:<6}  ({pct:5.1f}%)")
     print(f"  {SGR.IRON}{'─' * 46}{SGR.R}")
-    print(f"  {SGR.VERD}{SGR.B}{total}{SGR.R} alive  →  {cfg.output_dir}")
+    print(f"  {SGR.VERD}{SGR.B}{total}{SGR.R} alive  ->  {cfg.output_dir}")
     print(f"  {SGR.IRON}{OWNER}  ::  {CONTACT}  ::  bot support{SGR.R}\n")
-
     if cfg.notify:
         notify(
             f"{TOOL} · scan complete",
