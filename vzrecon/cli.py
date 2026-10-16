@@ -7,9 +7,7 @@ import time
 from pathlib import Path
 
 from . import __codename__, __version__
-from .brand import (
-    BANNER, CODENAME, CONTACT, CREW, MOTTO, OWNER, SUFFIX, SGR, TAGLINE, TOOL,
-)
+from .brand import CONTACT, CODENAME, CREW, OWNER, SUFFIX, SGR, TOOL
 from .config import PRESETS, Config
 from .engine import Scan, discover
 from .platform import notify, wake_lock, wake_unlock
@@ -56,7 +54,7 @@ def _merge(a):
         c.target_host = host
         c.target_port = int(port) if port else 443
     if a.only:
-        c.protocols = tuple(p.strip() for p in a.only.split(",") if p.strip())
+        c.protocols = tuple(x.strip() for x in a.only.split(",") if x.strip())
     if a.no_notify:
         c.notify = False
     if a.verify:
@@ -103,31 +101,21 @@ def _write(scans, cfg, out_dir):
             emit_csv(stem.with_suffix(".csv"), s.hits)
 
 
-def _splash():
-    print()
-    for ln in BANNER:
-        print(f"  {SGR.CRIM}{ln}{SGR.R}")
-    print(f"  {SGR.IRON}{CREW}  ::  {SUFFIX}{SGR.R}")
-    print(f"  {SGR.IRON}{SGR.I}{MOTTO}{SGR.R}")
-    print()
-
-
 def _about():
     print(f"""
-  {SGR.CRIM}{SGR.B}{CREW}{SGR.R} {SGR.IRON}// {SUFFIX}{SGR.R}
-  {SGR.IRON}{TAGLINE} // {MOTTO}{SGR.R}
+  {SGR.CRIM}{SGR.B}{CREW}{SGR.R}  {SGR.IRON}// {SUFFIX}{SGR.R}
+  {SGR.STEEL}{TOOL} {__version__}{SGR.R}  {SGR.IRON}// {CODENAME}{SGR.R}
 
   {SGR.IRON}owner    {SGR.R}{SGR.CRIM}{OWNER}{SGR.R}
   {SGR.IRON}contact  {SGR.R}{SGR.CRIM}{CONTACT}{SGR.R}
   {SGR.IRON}support  {SGR.R}{SGR.CRIM}bot support{SGR.R}
-  {SGR.IRON}tool     {SGR.R}{TOOL} {__version__} ({CODENAME}){SGR.R}
 """)
     return 0
 
 
 def _presets():
-    print(f"\n  {SGR.CRIM}{SGR.B}{CREW} // {SUFFIX}{SGR.R}  ·  presets")
-    print(f"  {SGR.IRON}{'─' * 46}{SGR.R}")
+    print(f"\n  {SGR.CRIM}{SGR.B}{CREW}{SGR.R}  {SGR.IRON}// presets{SGR.R}")
+    print(f"  {SGR.BLOOD}{'─' * 46}{SGR.R}")
     for n, v in PRESETS.items():
         print(
             f"  {SGR.GOLD}{n:<10}{SGR.R} {SGR.STEEL}"
@@ -146,34 +134,42 @@ def main(argv=None):
         return _presets()
     if a.self_test:
         from .selftest import run
-        print(f"\n  {SGR.CRIM}{SGR.B}{CREW} // {SUFFIX}{SGR.R}  ::  protocol self-test")
-        print(f"  {SGR.IRON}owner {OWNER}  ::  {CONTACT}{SGR.R}")
-        print(f"  {SGR.IRON}{'─' * 46}{SGR.R}")
+        print(f"\n  {SGR.CRIM}{SGR.B}{CREW}{SGR.R}  {SGR.IRON}// protocol self-test{SGR.R}")
+        print(f"  {SGR.IRON}{OWNER} // {CONTACT}{SGR.R}")
+        print(f"  {SGR.BLOOD}{'─' * 46}{SGR.R}")
         rc = asyncio.run(run())
         print()
         return rc
+
     try:
         cfg = _merge(a)
     except (ValueError, FileNotFoundError) as e:
         print(f"{SGR.CRIM}config:{SGR.R} {e}", file=sys.stderr)
         return 2
+
     sources = discover(cfg)
     if not sources:
         print(f"{SGR.CRIM}no sources{SGR.R} in {cfg.source_dir}", file=sys.stderr)
         return 3
-    _splash()
-    print(f"  {SGR.IRON}crew     {SGR.R}{SGR.CRIM}{CREW}  //  {OWNER}{SGR.R}")
-    print(f"  {SGR.IRON}contact  {SGR.R}{SGR.CRIM}{CONTACT}{SGR.R}")
+
+    print()
+    print(f"  {SGR.CRIM}{SGR.B}{CREW}{SGR.R}  {SGR.IRON}// {SUFFIX}{SGR.R}")
+    print(f"  {SGR.STEEL}{TOOL} {__version__}{SGR.R}  {SGR.IRON}// {CODENAME}{SGR.R}")
+    print()
     print(f"  {SGR.IRON}protocols{SGR.R} {', '.join(k for k, _ in sources)}")
     print(f"  {SGR.IRON}sources  {SGR.R} {len(sources)} file(s)")
     print(f"  {SGR.IRON}target   {SGR.R} {cfg.target_host}:{cfg.target_port}")
-    print(f"  {SGR.IRON}workers  {SGR.R} {cfg.workers}\n")
+    print(f"  {SGR.IRON}workers  {SGR.R} {cfg.workers}")
+    print()
+
     if cfg.wake_lock:
         wake_lock()
+
     scans = []
     Path(cfg.output_dir).mkdir(parents=True, exist_ok=True)
     for kind, src in sources:
         scans.append(Scan(kind, src, Path(cfg.output_dir) / f"{kind}_alive.txt", cfg))
+
     t0 = time.monotonic()
     try:
         with contextlib.suppress(KeyboardInterrupt):
@@ -182,9 +178,12 @@ def main(argv=None):
         if cfg.wake_lock:
             wake_unlock()
     dt = time.monotonic() - t0
+
     _write(scans, cfg, Path(cfg.output_dir))
-    print(f"\n  {SGR.CRIM}{SGR.B}{CREW}  ::  scan complete{SGR.R}")
-    print(f"  {SGR.IRON}{'─' * 46}{SGR.R}")
+
+    print()
+    print(f"  {SGR.CRIM}{SGR.B}{CREW}{SGR.R}  {SGR.IRON}// scan complete{SGR.R}")
+    print(f"  {SGR.BLOOD}{'─' * 46}{SGR.R}")
     print(f"  {SGR.IRON}duration{SGR.R}  {dt:.1f}s")
     total = 0
     for s in scans:
@@ -192,9 +191,11 @@ def main(argv=None):
         pct = (m.ok / m.done * 100) if m.done else 0
         total += m.ok
         print(f"  {s.kind:<7} {m.ok:>6} / {m.done:<6}  ({pct:5.1f}%)")
-    print(f"  {SGR.IRON}{'─' * 46}{SGR.R}")
+    print(f"  {SGR.BLOOD}{'─' * 46}{SGR.R}")
     print(f"  {SGR.VERD}{SGR.B}{total}{SGR.R} alive  ->  {cfg.output_dir}")
-    print(f"  {SGR.IRON}{OWNER}  ::  {CONTACT}  ::  bot support{SGR.R}\n")
+    print(f"  {SGR.IRON}{OWNER} // {CONTACT}{SGR.R}")
+    print()
+
     if cfg.notify:
         notify(
             f"{TOOL} · scan complete",

@@ -3,15 +3,12 @@ import sys
 from datetime import datetime, timezone
 
 from . import __version__
-from .brand import (
-    BANNER, CODENAME, CONTACT, CREW, MOTTO, OWNER, SUFFIX, SGR, TOOL,
-)
+from .brand import CONTACT, CODENAME, CREW, OWNER, SGR, TOOL
 from .metrics import fmt_dur, fmt_int, fmt_uptime
 
 
-def _visible(s):
-    n = 0
-    i = 0
+def _w(s):
+    n = i = 0
     while i < len(s):
         if s[i] == "\x1b":
             j = s.find("m", i)
@@ -24,8 +21,23 @@ def _visible(s):
     return n
 
 
-def _pad_right(s, w):
-    return s + " " * max(0, w - _visible(s))
+def _rpad(s, width):
+    return s + " " * max(0, width - _w(s))
+
+
+def _bar(frac, width):
+    fill = int(frac * width)
+    return f"{SGR.ICE}{'█' * fill}{SGR.IRON}{'░' * (width - fill)}{SGR.R}"
+
+
+def _lat(ms):
+    if ms is None:
+        return f"{SGR.IRON}   --{SGR.R}"
+    if ms < 500:
+        return f"{SGR.VERD}{ms:>5.0f}ms{SGR.R}"
+    if ms < 1500:
+        return f"{SGR.AMBER}{ms:>5.0f}ms{SGR.R}"
+    return f"{SGR.CRIM}{ms:>5.0f}ms{SGR.R}"
 
 
 class TUI:
@@ -37,10 +49,9 @@ class TUI:
         self.mode = mode
         self._prev = ""
         self._hits = []
-        self._cap = 6
 
-    def collect(self, hit):
-        self._hits.append(hit)
+    def collect(self, h):
+        self._hits.append(h)
         if len(self._hits) > 200:
             self._hits = self._hits[-200:]
 
@@ -48,168 +59,89 @@ class TUI:
         for s in self.scans:
             s.on_hit = self.collect
 
-    def _w(self):
+    def _render(self):
         try:
-            return max(64, min(shutil.get_terminal_size((80, 24)).columns - 2, 96))
+            cols = shutil.get_terminal_size((80, 24)).columns
         except OSError:
-            return 78
-
-    def _h(self):
-        try:
-            return shutil.get_terminal_size((80, 24)).lines
-        except OSError:
-            return 24
-
-    def _top(self, W):
+            cols = 80
+        W = max(52, min(cols - 2, 100))
         r = SGR.R
+
         utc = datetime.now(timezone.utc).strftime("%H:%M:%SZ")
-        left = (
-            f" {SGR.CRIM}{SGR.B}{CREW}{r}"
-            f"{SGR.IRON}  {SGR.STEEL}{SUFFIX}{r}"
-            f"{SGR.IRON}  ┃  {r}{SGR.GOLD}{TOOL} {__version__}{r}"
-            f"{SGR.IRON}  ┃  {r}{SGR.ASH}{CODENAME}{r}"
-        )
-        right = f"{SGR.IRON}{utc}{r} "
-        pad = W - _visible(left) - _visible(right)
-        return f"{SGR.BG}{left}{' ' * max(0, pad)}{right}{r}"
+        up = fmt_uptime(self.scans[0].meter.elapsed) if self.scans else "00:00:00"
 
-    def _strip(self, W):
-        r = SGR.R
-        col = (W - 6) // 2
-        left = [
-            (f"{SGR.IRON}SESSION{r}", f"{SGR.GOLD}{SGR.B}{self.sid}{r}"),
-            (f"{SGR.IRON}POOL   {r}", f"{SGR.IVORY}{self.workers}{r}"),
-            (f"{SGR.IRON}OWNER  {r}", f"{SGR.CRIM}{OWNER}{r}"),
-        ]
-        right = [
-            (f"{SGR.IRON}TARGET {r}", f"{SGR.IVORY}{self.target}{r}"),
-            (f"{SGR.IRON}MODE   {r}", f"{SGR.AMBER}{self.mode}{r}"),
-            (f"{SGR.IRON}CONTACT{r}", f"{SGR.CRIM}{CONTACT}{r}"),
-        ]
-        out = [""]
-        for (lk, lv), (rk, rv) in zip(left, right):
-            row = f"   {lk}  {lv}"
-            out.append(_pad_right(row, col + 4) + f"{rk}  {rv}")
-        out.append("")
-        return out
-
-    def _table(self, W):
-        r = SGR.R
         out = []
+
+        left = f"  {SGR.CRIM}{SGR.B}{CREW}{r}  {SGR.IRON}// {SGR.STEEL}ops{r}"
+        right = f"{SGR.IRON}{utc}{r}  "
+        out.append(_rpad(left, W - len(right)) + right)
+
+        out.append(f"  {SGR.STEEL}{TOOL} {__version__}{r}  {SGR.IRON}// {CODENAME}{r}")
+        out.append(f"  {SGR.BLOOD}{'─' * (W - 4)}{r}")
+        out.append("")
+
         out.append(
-            f"   {SGR.IRON}PROTO    LIVE    DEAD   RATE     ETA     p95   PROGRESS{r}"
+            f"  {SGR.IRON}target {SGR.IVORY}{self.target}{r}"
+            f"   {SGR.IRON}uptime {SGR.IVORY}{up}{r}"
         )
-        out.append(f"   {SGR.BLOOD}{'─' * (W - 6)}{r}")
-        bar_w = max(8, W - 66)
+        out.append(
+            f"  {SGR.IRON}session {SGR.GOLD}{self.sid}{r}"
+            f"   {SGR.IRON}pool {SGR.IVORY}{self.workers}{r}"
+            f"   {SGR.IRON}mode {SGR.AMBER}{self.mode}{r}"
+        )
+        out.append("")
+
+        bar_w = max(10, W - 34)
         for s in self.scans:
             m = s.meter
-            live = f"{SGR.VERD}{SGR.B}{m.ok:>5}{r}"
-            dead = f"{SGR.STEEL}{m.fail:>7}{r}"
+            frac = m.progress
+            bar = _bar(frac, bar_w)
+            name = s.kind.lower().ljust(7)
+            out.append(
+                f"  {SGR.ASH}{name}{r}{bar}  {SGR.IVORY}{frac * 100:>3.0f}%{r}"
+            )
+            live = f"{SGR.VERD}{SGR.B}{fmt_int(m.ok):>5}{r}"
+            dead = f"{SGR.STEEL}{fmt_int(m.fail):>7}{r}"
             rate = f"{SGR.IVORY}{m.rate():>5.0f}/s{r}"
             eta = fmt_dur(m.eta())
             eta_c = SGR.IVORY if eta != "--:--" else SGR.IRON
             eta_s = f"{eta_c}{eta:>5}{r}"
             p95 = m.percentile(0.95)
-            if p95 is None:
-                p95_s = f"{SGR.IRON}  -- {r}"
-            elif p95 < 500:
-                p95_s = f"{SGR.VERD}{p95:>4.0f}ms{r}"
-            elif p95 < 1500:
-                p95_s = f"{SGR.AMBER}{p95:>4.0f}ms{r}"
-            else:
-                p95_s = f"{SGR.CRIM}{p95:>4.0f}ms{r}"
-            frac = m.progress
-            fill = int(frac * bar_w)
-            bar = f"{SGR.ICE}{'▓' * fill}{SGR.IRON}{'░' * (bar_w - fill)}{r}"
-            pct = f"{SGR.ASH}{frac * 100:>3.0f}%{r}"
             out.append(
-                f"   {SGR.ASH}{s.kind.lower():<7}{r} "
-                f"{live}  {dead}  {rate}  {eta_s}  {p95_s}  {bar} {pct}"
+                f"         {live} live  {dead} dead  {rate}  {eta_s}  {_lat(p95)}"
             )
-        return out
+            out.append("")
 
-    def _live(self, W):
-        r = SGR.R
-        if not self._hits:
-            return []
-        out = [
-            f"   {SGR.IRON}LIVE{r}",
-            f"   {SGR.BLOOD}{'─' * (W - 6)}{r}",
-        ]
-        for h in self._hits[-self._cap:]:
-            ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
-            if h.latency_ms < 300:
-                c = SGR.VERD
-            elif h.latency_ms < 1000:
-                c = SGR.AMBER
-            else:
-                c = SGR.CRIM
-            out.append(
-                f"   {SGR.CRIM}▌{r} {SGR.IRON}{ts}{r} "
-                f"{SGR.ICE}{h.kind:<6}{r}"
-                f"{SGR.IVORY}{h.endpoint.ljust(30)}{r}"
-                f"{c}{h.latency_ms:>5.0f}ms{r}"
-            )
-        return out
-
-    def _status(self, W):
-        r = SGR.R
         ok = sum(s.meter.ok for s in self.scans)
         done = sum(s.meter.done for s in self.scans)
         total = sum(s.meter.total for s in self.scans)
         pct = (ok / done * 100.0) if done else 0.0
-        up = fmt_uptime(self.scans[0].meter.elapsed) if self.scans else "00:00:00"
-        left = (
-            f" {SGR.VERD}{SGR.B}{fmt_int(ok)}{r}"
-            f"{SGR.IRON} alive  {r}"
-            f"{SGR.ASH}{fmt_int(done)}/{fmt_int(total)}{r}"
-            f"{SGR.IRON} checked  {r}"
-            f"{SGR.GOLD}{pct:.2f}%{r}"
-            f"{SGR.IRON}  {r}{SGR.ASH}{up}{r}"
+        out.append(f"  {SGR.BLOOD}{'─' * (W - 4)}{r}")
+        out.append(
+            f"  {SGR.IRON}alive {SGR.VERD}{SGR.B}{fmt_int(ok)}{r}"
+            f"   {SGR.IRON}checked {SGR.ASH}{fmt_int(done)}/{fmt_int(total)}{r}"
+            f"   {SGR.IRON}hit {SGR.GOLD}{pct:.2f}%{r}"
         )
-        right = f"{SGR.IRON}ctrl+c quit{r} "
-        pad = W - _visible(left) - _visible(right)
-        return f"{SGR.BG_BAR}{left}{' ' * max(0, pad)}{right}{r}"
+        out.append("")
 
-    def _foot(self, W):
-        r = SGR.R
-        a = f"{CREW} // {OWNER}"
-        b = f"{CONTACT}"
-        pad = W - _visible(a) - _visible(b) - 6
-        return (
-            f"   {SGR.BLOOD}{SGR.I}{a}{r}"
-            f"{' ' * max(1, pad)}{SGR.IRON}{b}{r}"
-        )
+        for h in self._hits[-5:]:
+            ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
+            ep = h.endpoint.ljust(min(30, W - 34))
+            out.append(
+                f"  {SGR.IRON}{ts}{r}  {SGR.ICE}{h.kind:<7}{r}"
+                f"{SGR.IVORY}{ep}{r} {_lat(h.latency_ms)}"
+            )
 
-    def _render(self):
-        W = self._w()
-        H = self._h()
-        out = [self._top(W), ""]
-        if H >= 26:
-            for ln in BANNER:
-                pad = (W - len(ln)) // 2
-                out.append(f"{' ' * pad}{SGR.CRIM}{ln}{SGR.R}")
-            sub = f"{CREW}  ::  {SUFFIX}"
-            out.append(f"{' ' * ((W - len(sub)) // 2)}{SGR.IRON}{sub}{SGR.R}")
-            out.append(f"{' ' * ((W - len(MOTTO)) // 2)}{SGR.IRON}{SGR.I}{MOTTO}{SGR.R}")
-            out.append("")
-        out += self._strip(W)
-        out += self._table(W)
         out.append("")
-        out += self._live(W)
-        out.append("")
-        out.append(f"   {SGR.BLOOD}{'─' * (W - 6)}{SGR.R}")
-        out.append(self._status(W))
-        out.append("")
-        out.append(self._foot(W))
+        out.append(f"  {SGR.IRON}{OWNER} // {CONTACT}{r}")
         return "\n".join(out)
 
     def draw(self):
-        frame = self._render()
-        if frame == self._prev:
+        f = self._render()
+        if f == self._prev:
             return
-        self._prev = frame
-        sys.stdout.write("\x1b[H\x1b[2J" + frame)
+        self._prev = f
+        sys.stdout.write("\x1b[H\x1b[2J" + f)
         sys.stdout.flush()
 
     def enter(self):
