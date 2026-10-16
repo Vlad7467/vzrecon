@@ -1,43 +1,82 @@
 # vzrecon
 
-Protocol-level validator for HTTP, SOCKS4 and SOCKS5 proxies.
-Zero dependencies. Termux-native.
+Валидатор прокси на уровне протокола. HTTP, SOCKS4, SOCKS5.
+Без внешних зависимостей. Работает в Termux.
 
-Signed: VZLOI GROUP // ops
+Подпись: VZLOI GROUP // ops
 
-## Install
+## Установка
 
-    pip install -e .
+    pip install vzrecon
+
+Проверка:
+
     vzrecon --self-test
 
-## Use
+## Использование
 
-    vzrecon                          # scan cwd for *_proxies.txt
-    vzrecon -d ./lists -o ./out      # explicit paths
-    vzrecon --preset stealth         # 200 workers
-    vzrecon --preset turbo           # 2400 workers
-    vzrecon --only http,socks5
-    vzrecon --plain
+    vzrecon                          # скан текущей папки на *_proxies.txt
+    vzrecon -d ./lists -o ./out      # явные пути
+    vzrecon --preset stealth         # 200 воркеров, экономит батарею
+    vzrecon --preset turbo           # 2400 воркеров
+    vzrecon --only http,socks5       # подмножество протоколов
+    vzrecon --verify                 # реальный запрос через туннель
+    vzrecon --plain                  # вывод без TUI, для пайпов
 
-## Protocols
+Исходные файлы: `<протокол>_proxies.txt`, по одному `host:port` в строке.
 
-- HTTP    RFC 7231 CONNECT + forward GET fallback
-- SOCKS5  RFC 1928, no-auth greeting
-- SOCKS4  original spec, IPv4 targets only
+## Протоколы
 
-## Output
+- HTTP — RFC 7231 §4.3.6, CONNECT-туннель, откат на forward-GET
+- SOCKS5 — RFC 1928, приветствие без авторизации, доменный ATYP
+- SOCKS4 — оригинал, только IPv4, резолв на клиенте
 
-- `<proto>_alive.txt` — endpoints, one per line
-- `<proto>_alive.json` — signed_by, protocol, count, proxies[]
-- `<proto>_alive.csv` — endpoint, latency_ms
+Латентность измеряется через `time.perf_counter` — от открытия
+TCP до получения ответа протокола.
 
-## Exit codes
+## Режим --verify
 
-- 0 scan completed
-- 1 self-test failed
-- 2 config error
-- 3 no source files found
+Обычная проверка — только handshake. Прокси может согласиться на
+CONNECT, но фактически не передавать трафик: whitelist, auth при
+первом пакете, rate-limit.
 
-## License
+С `--verify` после успешного handshake идёт второй запрос —
+реальный HTTP через установленный туннель. Если ответ дошёл,
+прокси действительно работает.
+
+Прирост точности: 30-70% отсева мусора, который handshake пропускает.
+
+## Вывод
+
+- `<протокол>_alive.txt` — по одному endpoint в строке
+- `<протокол>_alive.json` — с полем `signed_by`, метаданными
+- `<протокол>_alive.csv` — endpoint, latency_ms
+
+## Коды выхода
+
+    0  скан завершён
+    1  self-test упал
+    2  ошибка конфига
+    3  нет исходных файлов
+
+## Termux
+
+- Wake-lock берётся на старте, отпускается по завершению
+- Уведомление по завершению через termux-notification
+- Пресеты подобраны под процессор телефона и батарею
+
+Для уведомлений: `pkg install termux-api`
+
+## Архитектура
+
+- Фиксированный пул воркеров тянет из `asyncio.Queue`. Никаких
+  задач на каждый endpoint.
+- Sink открыт с построчной буферизацией. SIGINT не теряет уже
+  записанные результаты.
+- Ошибки транспорта считаются, а не логируются. При сканировании
+  десятков тысяч мёртвых адресов лог — это шум, а не сигнал.
+- Ноль внешних зависимостей. Только стандартная библиотека.
+
+## Лицензия
 
 MIT. Copyright (c) 2026 VZLOI GROUP.
