@@ -1,5 +1,6 @@
 import shutil, sys
 from datetime import datetime, timezone
+from . import __version__ as _VERSION
 from .brand import (BANNER, CODENAME, CREW, OWNER, CONTACT, MOTTO,
                     SUPPORT, SUFFIX, TAGLINE, TOOL, SGR)
 from .metrics import fmt_dur, fmt_int, fmt_uptime
@@ -59,7 +60,7 @@ class TUI:
         utc = datetime.now(timezone.utc).strftime("%H:%M:%SZ")
         left = (f" {SGR.CRIM}{SGR.B}{CREW}{r}"
                 f"{SGR.IRON}  {r}{SGR.STEEL}{SUFFIX}{r}"
-                f"{SGR.IRON}  ┃  {r}{SGR.GOLD}{TOOL} {SGR.IRON}{from vzrecon import __version__ as _v; _v}{r}"
+                f"{SGR.IRON}  ┃  {r}{SGR.GOLD}{TOOL} {SGR.IRON}{_VERSION}{r}"
                 f"{SGR.IRON}  ┃  {r}{SGR.ASH}{CODENAME}{r}")
         right = f"{SGR.IRON}{utc}{r} "
         pad = W - _vis(left) - _vis(right)
