@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vzrecon"
-version = "4.8.0"
+version = "6.0.0"
 description = "Protocol-level validator for HTTP/SOCKS4/SOCKS5 proxies"
 readme = "README.md"
 requires-python = ">=3.11"

@@ -7,7 +7,11 @@ import time
 from pathlib import Path
 
 from . import __codename__, __version__
-from .brand import CONTACT, CODENAME, CREW, OWNER, SUFFIX, SGR, TOOL
+from .brand import (
+    CONTACT, CODENAME, CREW, GROUP_BANNER, OWNER, RU_CONTACT, RU_DEV,
+    RU_OWNER, RU_SUPPORT, SGR, SUFFIX, TAG_LINE, TOOL, VZLOI_CYR,
+    render_version,
+)
 from .config import PRESETS, Config
 from .engine import Scan, discover
 from .platform import notify, wake_lock, wake_unlock
@@ -101,15 +105,29 @@ def _write(scans, cfg, out_dir):
             emit_csv(stem.with_suffix(".csv"), s.hits)
 
 
-def _about():
-    from .brand import BANNER, render_version
+def _splash():
+    wmax = max(len(RU_DEV), len(RU_OWNER), len(RU_CONTACT), len(RU_SUPPORT)) + 1
     print()
-    for ln in BANNER:
+    for ln in GROUP_BANNER:
         print(f"  {SGR.CRIM}{ln}{SGR.R}")
+    print()
+    for ln in VZLOI_CYR:
+        print(f"  {SGR.CRIM}{ln}{SGR.R}")
+    print()
+    print(f"  {SGR.ASH}{TAG_LINE}{SGR.R}")
+    print()
     for ln in render_version(__version__):
         print(f"  {SGR.GOLD}{ln}{SGR.R}")
-    print(f"  {SGR.IRON}  {CODENAME}  //  {OWNER}  //  {CONTACT}{SGR.R}")
     print()
+    print(f"  {SGR.IRON}{RU_DEV + ':':<{wmax}}{SGR.R} {SGR.CRIM}{SGR.B}{CREW}{SGR.R}")
+    print(f"  {SGR.IRON}{RU_OWNER + ':':<{wmax}}{SGR.R} {SGR.CRIM}{SGR.B}{OWNER}{SGR.R}")
+    print(f"  {SGR.IRON}{RU_CONTACT + ':':<{wmax}}{SGR.R} {SGR.CRIM}{SGR.B}{CONTACT}{SGR.R}")
+    print(f"  {SGR.IRON}{RU_SUPPORT + ':':<{wmax}}{SGR.R} {SGR.CRIM}{SGR.B}{CONTACT}{SGR.R}")
+    print()
+
+
+def _about():
+    _splash()
     return 0
 
 
@@ -134,7 +152,7 @@ def main(argv=None):
         return _presets()
     if a.self_test:
         from .selftest import run
-        print(f"\n  {SGR.CRIM}{SGR.B}{CREW}{SGR.R}  {SGR.IRON}// protocol self-test{SGR.R}")
+        print(f"\n  {SGR.CRIM}{SGR.B}{CREW}{SGR.R}  {SGR.IRON}// self-test{SGR.R}")
         print(f"  {SGR.IRON}{OWNER} // {CONTACT}{SGR.R}")
         print(f"  {SGR.BLOOD}{'─' * 46}{SGR.R}")
         rc = asyncio.run(run())
@@ -152,14 +170,10 @@ def main(argv=None):
         print(f"{SGR.CRIM}no sources{SGR.R} in {cfg.source_dir}", file=sys.stderr)
         return 3
 
-    print()
-    print(f"  {SGR.CRIM}{SGR.B}{CREW}{SGR.R}  {SGR.IRON}// {SUFFIX}{SGR.R}")
-    print(f"  {SGR.STEEL}{TOOL} {__version__}{SGR.R}  {SGR.IRON}// {CODENAME}{SGR.R}")
-    print()
-    print(f"  {SGR.IRON}protocols{SGR.R} {', '.join(k for k, _ in sources)}")
-    print(f"  {SGR.IRON}sources  {SGR.R} {len(sources)} file(s)")
-    print(f"  {SGR.IRON}target   {SGR.R} {cfg.target_host}:{cfg.target_port}")
-    print(f"  {SGR.IRON}workers  {SGR.R} {cfg.workers}")
+    _splash()
+    print(f"  {SGR.IRON}target    {SGR.R}{cfg.target_host}:{cfg.target_port}")
+    print(f"  {SGR.IRON}protocols {SGR.R}{', '.join(k for k, _ in sources)}")
+    print(f"  {SGR.IRON}workers   {SGR.R}{cfg.workers}")
     print()
 
     if cfg.wake_lock:
@@ -182,8 +196,7 @@ def main(argv=None):
     _write(scans, cfg, Path(cfg.output_dir))
 
     print()
-    print(f"  {SGR.CRIM}{SGR.B}{CREW}{SGR.R}  {SGR.IRON}// scan complete{SGR.R}")
-    print(f"  {SGR.BLOOD}{'─' * 46}{SGR.R}")
+    print(f"  {SGR.IRON}{'─' * 46}{SGR.R}")
     print(f"  {SGR.IRON}duration{SGR.R}  {dt:.1f}s")
     total = 0
     for s in scans:
@@ -191,9 +204,8 @@ def main(argv=None):
         pct = (m.ok / m.done * 100) if m.done else 0
         total += m.ok
         print(f"  {s.kind:<7} {m.ok:>6} / {m.done:<6}  ({pct:5.1f}%)")
-    print(f"  {SGR.BLOOD}{'─' * 46}{SGR.R}")
+    print(f"  {SGR.IRON}{'─' * 46}{SGR.R}")
     print(f"  {SGR.VERD}{SGR.B}{total}{SGR.R} alive  ->  {cfg.output_dir}")
-    print(f"  {SGR.IRON}{OWNER} // {CONTACT}{SGR.R}")
     print()
 
     if cfg.notify:

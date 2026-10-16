@@ -3,7 +3,10 @@ import sys
 from datetime import datetime, timezone
 
 from . import __version__
-from .brand import CONTACT, CODENAME, CREW, OWNER, SGR, TOOL
+from .brand import (
+    CONTACT, CODENAME, CREW, GROUP_BANNER, OWNER, RU_CONTACT, RU_DEV,
+    RU_OWNER, RU_SUPPORT, SGR, TAG_LINE, TOOL, VZLOI_CYR, render_version,
+)
 from .metrics import fmt_dur, fmt_int, fmt_uptime
 
 
@@ -61,9 +64,10 @@ class TUI:
 
     def _render(self):
         try:
-            cols = shutil.get_terminal_size((80, 24)).columns
+            t = shutil.get_terminal_size((80, 24))
+            cols, lines = t.columns, t.lines
         except OSError:
-            cols = 80
+            cols, lines = 80, 24
         W = max(52, min(cols - 2, 100))
         r = SGR.R
 
@@ -72,11 +76,29 @@ class TUI:
 
         out = []
 
-        left = f"  {SGR.CRIM}{SGR.B}{CREW}{r}  {SGR.IRON}// {SGR.STEEL}ops{r}"
+        # full branding only when terminal has vertical room
+        if lines >= 48:
+            for ln in GROUP_BANNER:
+                out.append(f"  {SGR.CRIM}{ln}{r}")
+            out.append("")
+            for ln in VZLOI_CYR:
+                out.append(f"  {SGR.CRIM}{ln}{r}")
+            out.append("")
+            out.append(f"  {SGR.ASH}{TAG_LINE}{r}")
+            out.append("")
+            for ln in render_version(__version__):
+                out.append(f"  {SGR.GOLD}{ln}{r}")
+            out.append("")
+            wmax = max(len(RU_DEV), len(RU_OWNER), len(RU_CONTACT), len(RU_SUPPORT)) + 1
+            out.append(f"  {SGR.IRON}{RU_DEV + ':':<{wmax}}{r} {SGR.CRIM}{CREW}{r}")
+            out.append(f"  {SGR.IRON}{RU_OWNER + ':':<{wmax}}{r} {SGR.CRIM}{OWNER}{r}")
+            out.append(f"  {SGR.IRON}{RU_CONTACT + ':':<{wmax}}{r} {SGR.CRIM}{CONTACT}{r}")
+            out.append(f"  {SGR.IRON}{RU_SUPPORT + ':':<{wmax}}{r} {SGR.CRIM}{CONTACT}{r}")
+            out.append("")
+
+        left = f"  {SGR.CRIM}{SGR.B}{CREW}{r}  {SGR.IRON}·  {r}{SGR.GOLD}{TOOL} {__version__}{r}"
         right = f"{SGR.IRON}{utc}{r}  "
         out.append(_rpad(left, W - len(right)) + right)
-
-        out.append(f"  {SGR.STEEL}{TOOL} {__version__}{r}  {SGR.IRON}// {CODENAME}{r}")
         out.append(f"  {SGR.BLOOD}{'─' * (W - 4)}{r}")
         out.append("")
 
@@ -97,9 +119,7 @@ class TUI:
             frac = m.progress
             bar = _bar(frac, bar_w)
             name = s.kind.lower().ljust(7)
-            out.append(
-                f"  {SGR.ASH}{name}{r}{bar}  {SGR.IVORY}{frac * 100:>3.0f}%{r}"
-            )
+            out.append(f"  {SGR.ASH}{name}{r}{bar}  {SGR.IVORY}{frac * 100:>3.0f}%{r}")
             live = f"{SGR.VERD}{SGR.B}{fmt_int(m.ok):>5}{r}"
             dead = f"{SGR.STEEL}{fmt_int(m.fail):>7}{r}"
             rate = f"{SGR.IVORY}{m.rate():>5.0f}/s{r}"
@@ -133,7 +153,12 @@ class TUI:
             )
 
         out.append("")
-        out.append(f"  {SGR.IRON}{OWNER} // {CONTACT}{r}")
+        wmax = max(len(RU_DEV), len(RU_OWNER), len(RU_CONTACT)) + 1
+        out.append(
+            f"  {SGR.IRON}{RU_DEV + ':':<{wmax}}{r} {SGR.CRIM}{CREW}{r}"
+            f"    {SGR.IRON}{RU_OWNER + ':':<{wmax}}{r} {SGR.CRIM}{OWNER}{r}"
+            f"    {SGR.IRON}{RU_CONTACT + ':':<{wmax}}{r} {SGR.CRIM}{CONTACT}{r}"
+        )
         return "\n".join(out)
 
     def draw(self):
