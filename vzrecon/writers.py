@@ -12,7 +12,6 @@ def emit_json(p, kind, hits):
     payload = {
         "signed_by": CREW,
         "motto": MOTTO,
-        "origin": HOMELAND,
         "protocol": kind,
         "count": len(hits),
         "proxies": [{"endpoint": e, "latency_ms": round(l, 2)} for e, l in hits],

@@ -1,4 +1,4 @@
-__version__ = "3.0.4"
+__version__ = "3.0.6"
 __codename__ = "IRON VEIL"
 __author__ = "VZLOI GROUP"
 __owner__ = "ghost189"

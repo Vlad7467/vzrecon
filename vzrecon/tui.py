@@ -59,7 +59,7 @@ class TUI:
         utc = datetime.now(timezone.utc).strftime("%H:%M:%SZ")
         left = (f" {SGR.CRIM}{SGR.B}{CREW}{r}"
                 f"{SGR.IRON}  {r}{SGR.STEEL}{SUFFIX}{r}"
-                f"{SGR.IRON}  ┃  {r}{SGR.GOLD}{TOOL} {SGR.IRON}{__import__('vzrecon').__version__}{r}"
+                f"{SGR.IRON}  ┃  {r}{SGR.GOLD}{TOOL} {SGR.IRON}{from vzrecon import __version__ as _v; _v}{r}"
                 f"{SGR.IRON}  ┃  {r}{SGR.ASH}{CODENAME}{r}")
         right = f"{SGR.IRON}{utc}{r} "
         pad = W - _vis(left) - _vis(right)
