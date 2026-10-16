@@ -102,14 +102,14 @@ def _write(scans, cfg, out_dir):
 
 
 def _about():
-    print(f"""
-  {SGR.CRIM}{SGR.B}{CREW}{SGR.R}  {SGR.IRON}// {SUFFIX}{SGR.R}
-  {SGR.STEEL}{TOOL} {__version__}{SGR.R}  {SGR.IRON}// {CODENAME}{SGR.R}
-
-  {SGR.IRON}owner    {SGR.R}{SGR.CRIM}{OWNER}{SGR.R}
-  {SGR.IRON}contact  {SGR.R}{SGR.CRIM}{CONTACT}{SGR.R}
-  {SGR.IRON}support  {SGR.R}{SGR.CRIM}bot support{SGR.R}
-""")
+    from .brand import BANNER, render_version
+    print()
+    for ln in BANNER:
+        print(f"  {SGR.CRIM}{ln}{SGR.R}")
+    for ln in render_version(__version__):
+        print(f"  {SGR.GOLD}{ln}{SGR.R}")
+    print(f"  {SGR.IRON}  {CODENAME}  //  {OWNER}  //  {CONTACT}{SGR.R}")
+    print()
     return 0
 
 
