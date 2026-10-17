@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from . import __version__
 from .brand import (
     CONTACT, CODENAME, CREW, GROUP_BANNER, OWNER, RU_CONTACT, RU_DEV,
-    RU_OWNER, RU_SUPPORT, SGR, TAG_LINE, TOOL, VZLOI_CYR, render_version,
+    RU_OWNER, RU_SUPPORT, SGR, TAG_LINE, TOOL, render_version,
 )
 from .metrics import fmt_dur, fmt_int, fmt_uptime
 
@@ -76,18 +76,14 @@ class TUI:
 
         out = []
 
-        # full branding only when terminal has vertical room
-        if lines >= 48:
+        if lines >= 40:
             for ln in GROUP_BANNER:
                 out.append(f"  {SGR.CRIM}{ln}{r}")
             out.append("")
-            for ln in VZLOI_CYR:
-                out.append(f"  {SGR.CRIM}{ln}{r}")
-            out.append("")
-            out.append(f"  {SGR.ASH}{TAG_LINE}{r}")
-            out.append("")
             for ln in render_version(__version__):
                 out.append(f"  {SGR.GOLD}{ln}{r}")
+            out.append("")
+            out.append(f"  {SGR.ASH}{TAG_LINE}{r}")
             out.append("")
             wmax = max(len(RU_DEV), len(RU_OWNER), len(RU_CONTACT), len(RU_SUPPORT)) + 1
             out.append(f"  {SGR.IRON}{RU_DEV + ':':<{wmax}}{r} {SGR.CRIM}{CREW}{r}")

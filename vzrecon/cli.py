@@ -9,8 +9,7 @@ from pathlib import Path
 from . import __codename__, __version__
 from .brand import (
     CONTACT, CODENAME, CREW, GROUP_BANNER, OWNER, RU_CONTACT, RU_DEV,
-    RU_OWNER, RU_SUPPORT, SGR, SUFFIX, TAG_LINE, TOOL, VZLOI_CYR,
-    render_version,
+    RU_OWNER, RU_SUPPORT, SGR, TAG_LINE, TOOL, render_version,
 )
 from .config import PRESETS, Config
 from .engine import Scan, discover
@@ -111,13 +110,10 @@ def _splash():
     for ln in GROUP_BANNER:
         print(f"  {SGR.CRIM}{ln}{SGR.R}")
     print()
-    for ln in VZLOI_CYR:
-        print(f"  {SGR.CRIM}{ln}{SGR.R}")
-    print()
-    print(f"  {SGR.ASH}{TAG_LINE}{SGR.R}")
-    print()
     for ln in render_version(__version__):
         print(f"  {SGR.GOLD}{ln}{SGR.R}")
+    print()
+    print(f"  {SGR.ASH}{TAG_LINE}{SGR.R}")
     print()
     print(f"  {SGR.IRON}{RU_DEV + ':':<{wmax}}{SGR.R} {SGR.CRIM}{SGR.B}{CREW}{SGR.R}")
     print(f"  {SGR.IRON}{RU_OWNER + ':':<{wmax}}{SGR.R} {SGR.CRIM}{SGR.B}{OWNER}{SGR.R}")
