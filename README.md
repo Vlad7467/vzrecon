@@ -1,80 +1,101 @@
+
 # vzrecon
 
 ```
 
-██╗   ██╗███████╗██╗      ██████╗ ██╗
-██║   ██║╚══███╔╝██║     ██╔═══██╗██║
-██║   ██║  ███╔╝ ██║     ██║   ██║██║
-╚██╗ ██╔╝ ███╔╝  ██║     ██║   ██║██║
-╚████╔╝ ███████╗███████╗╚██████╔╝██║
-╚═══╝  ╚══════╝╚══════╝ ╚═════╝ ╚═╝
-VZLOI GROUP // ops
-no gods, no masters, no logs
+██╗   ██╗███████╗██████╗ ███████╗ ██████╗ ██████╗ ███╗   ██╗
+██║   ██║╚══███╔╝██╔══██╗██╔════╝██╔════╝██╔═══██╗████╗  ██║
+██║   ██║  ███╔╝ ██████╔╝█████╗  ██║     ██║   ██║██╔██╗ ██║
+╚██╗ ██╔╝ ███╔╝  ██╔══██╗██╔══╝  ██║     ██║   ██║██║╚██╗██║
+╚████╔╝ ███████╗██║  ██║███████╗╚██████╗╚██████╔╝██║ ╚████║
+╚═══╝  ╚══════╝╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═════╝ ╚═╝  ╚═══╝
 
 ```
 
-Валидатор прокси на уровне протокола. HTTP, SOCKS4, SOCKS5.
-Без зависимостей. Работает в Termux.
+**Protocol-level proxy validator for HTTP, SOCKS4, and SOCKS5.**
+Developed by **VZLOI GROUP** — an independent Russian hacker group.
 
-Сборка: **VZLOI GROUP**, дивизион ops, Москва.
+## Why
 
-## Установка
+Most proxy checkers just try to fetch a URL through the proxy and call it a day. That test mixes three different problems: whether the proxy is reachable, whether it speaks the protocol, and whether the target site is actually up.
 
-    pip install vzrecon
+`vzrecon` separates them. It opens a socket, performs the actual protocol handshake according to the RFC, and measures the round-trip latency of that negotiation. Target server availability is not part of the result.
 
-    vzrecon --self-test
+## Features                                                                 
+- **Protocol-accurate validation:** HTTP CONNECT (RFC 7231), SOCKS5 (RFC 1928), and SOCKS4.
+- **`--verify` mode:** After a successful handshake, it sends a real HTTP request through the tunnel to ensure the proxy actually forwards traffic, not just agrees to connect.
+- **Zero dependencies:** Only the Python standard library is used.
+- **Termux-native:** Works perfectly on Android. Wake-locks and notifications included.
+- **High concurrency:** Built on `asyncio` with a bounded queue and a fixed worker pool. No memory leaks on large lists.
+- **Flexible output:** TXT, JSON (signed by VZLOI GROUP), CSV.
 
-## Использование
+## Install
 
-    vzrecon                          # скан папки на *_proxies.txt
-    vzrecon -d ./lists -o ./out      # явные пути
-    vzrecon --preset stealth         # 200 воркеров
-    vzrecon --preset turbo           # 2400 воркеров
-    vzrecon --only http,socks5
-    vzrecon --verify                 # реальный запрос через туннель
-    vzrecon --plain
+```sh
+pip install vzrecon
+```
 
-## Протоколы
+Verify the build:
 
-- **HTTP** — RFC 7231 §4.3.6, CONNECT, откат на forward-GET
-- **SOCKS5** — RFC 1928, no-auth приветствие, доменный ATYP
-- **SOCKS4** — оригинал, IPv4, резолв на клиенте
+```sh
+vzrecon --self-test
+```
 
-## --verify
+Usage
 
-Handshake недостаточно: прокси может принять CONNECT и не
-форвардить трафик. Whitelist, auth на первом пакете, rate-limit.
+```sh
+vzrecon                          # Scan current directory for *_proxies.txt
+vzrecon -d ./lists -o ./out      # Explicit paths
+vzrecon --preset stealth         # 200 workers, battery-friendly
+vzrecon --preset turbo           # 2400 workers
+vzrecon --only http,socks5       # Subset of protocols
+vzrecon --verify                 # Real request through the tunnel
+vzrecon --plain                  # Pipe-friendly, no alt-screen TUI
+```
 
-С `--verify` после handshake идёт реальный HTTP через туннель.
-Отсеивает 30-70% от того, что handshake пропустил как живое.
+Source files must be named <protocol>_proxies.txt with one host:port per line.
 
-## Вывод
+Protocols
 
-- `<протокол>_alive.txt` — endpoint на строку
-- `<протокол>_alive.json` — с `signed_by`, `motto`, `origin`
-- `<протокол>_alive.csv` — endpoint, latency_ms
+Protocol Standard Notes
+HTTP RFC 7231 §4.3.6 CONNECT tunnelling, fallback to forward-GET
+SOCKS5 RFC 1928 No-auth greeting, domain ATYP
+SOCKS4 Original IPv4 targets only, client-side resolve
 
-## Коды выхода
+Latency is measured using time.perf_counter from the moment the TCP connection is issued to the moment the protocol reply is fully received.
 
-    0  скан завершён
-    1  self-test упал
-    2  ошибка конфига
-    3  нет исходных файлов
+Output
 
-## Termux
+· <proto>_alive.txt — Plain endpoints, one per line.
+· <proto>_alive.json — signed_by, owner, contact, support, motto, protocol, count, proxies[].
+· <proto>_alive.csv — endpoint,latency_ms.
 
-- Wake-lock на старте, релиз в finally
-- Уведомление по завершению через termux-notification
-- Пресеты под процессор телефона и батарею
+Exit Codes
 
-`pkg install termux-api` для уведомлений.
+· 0 — Scan completed.
+· 1 — Self-test failed.
+· 2 — Config error.
+· 3 — No source files found.
 
-## VZLOI GROUP
+Termux Integration
 
-`docs/VZLOI.md`.
+· Wake-lock is acquired on start and released on exit.
+· termux-notification fires when the scan completes.
+· Presets tuned for phone CPU and battery limits.
 
-Не пиши нам. Не ищи нас. Мы найдём первыми.
+Requires termux-api for notifications.
 
-## Лицензия
+VZLOI GROUP
+
+```
+Development: VZLOI GROUP
+Author:      ghost189
+Contact:     @foskza
+Support:     @foskza
+```
+
+We don't ask for permission. We don't report back. We don't apologize.
+
+License
 
 MIT. Copyright (c) 2026 VZLOI GROUP.
