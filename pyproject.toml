@@ -4,18 +4,20 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vzrecon"
-version = "6.1.4"
-description = "Protocol-level validator for HTTP/SOCKS4/SOCKS5 proxies"
+version = "6.1.5"
+description = "Protocol-level proxy validator for HTTP, SOCKS4, and SOCKS5."
 readme = "README.md"
 requires-python = ">=3.11"
-license = "MIT"
-authors = [{name = "VZLOI GROUP"}]
-keywords = ["proxy","socks","socks5","socks4","validator","recon","async"]
+license = {text = "MIT"}
+authors = [{name = "ghost189", email = "ghost189@vzloi.group"}]
+maintainers = [{name = "VZLOI GROUP"}]
+keywords = ["proxy", "socks", "socks5", "socks4", "validator", "recon", "async", "pentest", "termux"]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Environment :: Console",
   "Intended Audience :: Developers",
   "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: MIT License",
   "Operating System :: POSIX",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
@@ -31,10 +33,9 @@ dependencies = []
 dev = ["pytest>=8.0", "pytest-asyncio>=0.23"]
 
 [project.urls]
-Homepage = "https://github.com/vzloi/vzrecon"
-Source = "https://github.com/vzloi/vzrecon"
-Issues = "https://github.com/vzloi/vzrecon/issues"
-Changelog = "https://github.com/vzloi/vzrecon/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/Vlad7467/vzrecon"
+Source = "https://github.com/Vlad7467/vzrecon"
+Issues = "https://github.com/Vlad7467/vzrecon/issues"
 
 [project.scripts]
 vzrecon = "vzrecon.cli:main"
